@@ -1,48 +1,65 @@
-int throttlePin = 8;
-int throttleOut = 9;
-int throttleHighCount = 0;
-int throttleCount = 0;
-int throttle = 0;
-unsigned long temp = 0;
-double percent = 0;
-bool throttleHigh = false;
-unsigned long pulseStart = 0;
-unsigned long pulseLength = 0;
+/* PIN(I/O)  ARRAY  COLOR
+ * A1/8      0      WHITE
+ * A2/9      1      BLUE
+ * A3/10     2      YELLOW
+ * A4/11     3      GREEN
+ * A5/12     4      ORANGE
+ */
+#define numPins 5
+ 
+int inputPin[numPins] = {A1,A2,A3,A4,A5};
+int outputPin[numPins] = {8,9,10,11,12};
+int inputHighCount[numPins];
+int inputTotalCount[numPins];
+int lastInput[numPins];
+double percentWidth[numPins];
+bool inputHigh[numPins];
+unsigned long pulseStart[numPins];
+unsigned long pulseLength[numPins];
 
 void setup() {
-  // put your setup code here, to run once:
-  pinMode(throttlePin, INPUT);
-  pinMode(throttleOut, OUTPUT);
+  for(int i = 0; i < numPins; i++){
+    pinMode(inputPin[i], INPUT);
+    pinMode(outputPin[i], OUTPUT);
+    inputHighCount[i] = 0;
+    inputTotalCount[i] = 0;
+    lastInput[i] = LOW;
+    percentWidth[i] = 0;
+    inputHigh[i] = false;
+    pulseStart[i] = 0;
+    pulseLength[i] = 0;
+  }
+  
   Serial.begin(9600);
 }
 
 void loop() {
   unsigned long newTime = micros();
-  
-  //Read Input
-  int newThrottle = digitalRead(throttlePin);
-  if(newThrottle == HIGH && throttle == LOW){
-    percent = (double)throttleHighCount/throttleCount;
-    pulseLength = newTime - pulseStart;
-    pulseStart = newTime;
-    throttleCount = 0;
-    throttleHighCount = 0;
-  }
-  if(newThrottle == HIGH)
-    throttleHighCount++;
-  throttleCount++;
-  throttle = newThrottle;
-  
-  //Write Output
-  unsigned long pulseTime = newTime - pulseStart;
-  
-  if(pulseTime == 0 && !throttleHigh){
-    digitalWrite(throttleOut, HIGH);
-    throttleHigh = true;
+  for(int i = 0; i < numPins; i++){
+    //Read Input
+    int newInput = digitalRead(inputPin[i]);
+    if(newInput == HIGH && lastInput[i] == LOW){
+      percentWidth[i] = (double)inputHighCount[i]/inputTotalCount[i];
+      pulseLength[i] = newTime - pulseStart[i];
+      pulseStart[i] = newTime;
+      inputTotalCount[i] = 0;
+      inputHighCount[i] = 0;
+    }
+    if(newInput == HIGH)
+      inputHighCount[i]++;
+    inputTotalCount[i]++;
+    lastInput[i] = newInput;
     
-  }
-  if(pulseTime > pulseLength * percent && throttleHigh){
-    digitalWrite(throttleOut, LOW);
-    throttleHigh = false;
+    //Write Output
+    unsigned long pulseTime = newTime - pulseStart[i];
+    
+    if(pulseTime == 0 && !inputHigh[i]){
+      digitalWrite(outputPin[i], HIGH);
+      inputHigh[i] = true;
+    }
+    if(pulseTime > pulseLength[i] * percentWidth[i] && inputHigh[i]){
+      digitalWrite(outputPin[i], LOW);
+      inputHigh[i] = false;
+    } 
   }
 }
