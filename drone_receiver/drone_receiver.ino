@@ -1,12 +1,6 @@
-/* PIN(I/O)  ARRAY  COLOR
- * A1/8      0      WHITE
- * A2/9      1      BLUE
- * A3/10     2      YELLOW
- * A4/11     3      GREEN
- * A5/12     4      ORANGE
- */
 #define numPins 5
- 
+#include <PID_v1.h>
+
 int inputPin[numPins] = {A1,A2,A3,A4,A5};
 int outputPin[numPins] = {8,9,10,11,12};
 int inputHighCount[numPins];
@@ -16,6 +10,15 @@ double percentWidth[numPins];
 bool inputHigh[numPins];
 unsigned long pulseStart[numPins];
 unsigned long pulseLength[numPins];
+// PID Parameters
+float kp = 0;
+float ki = 0;
+float kd = 0;
+double pidSetpoint, pidInput, pidOutput; //just shit
+PID myPID(&pidInput, &pidOutput, &pidSetpoint, kp, ki, kd, DIRECT); //sets up loop, input from encoder, output to ardupilot, setpoint is 0, DIRECT is because it's non-inverting
+
+const int sampleRate = 10; //milliseconds sample raet
+
 
 void setup() {
   for(int i = 0; i < numPins; i++){
@@ -29,8 +32,12 @@ void setup() {
     pulseStart[i] = 0;
     pulseLength[i] = 0;
   }
-  
+
+  pidSetpoint = 128; //because middle of 0-255
+
   Serial.begin(9600);
+  myPID.SetMode(AUTOMATIC); //turns that shit on
+  myPID.SetSampleTime(sampleRate);
 }
 
 void loop() {
@@ -62,4 +69,9 @@ void loop() {
       inputHigh[i] = false;
     } 
   }
+  encoder = analogRead(whatever_fucking_pin);
+  pidInput = map(encoder, 0, 200, 0, 255); //mappind encoder input from 0-200 to right scale
+  myPID.Compute();
+  //now the PID loop has run, and if you call pidOutput, you'll get a value from 0 to 255 that you can do whatever to
+
 }
